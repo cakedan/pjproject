@@ -2713,7 +2713,7 @@ class Lib:
 
     def create_audio_cb(self, callback):
         """Create audio callback.
-
+ 
         Keyword arguments
         callback    -- An object with one or both of methods:
                        string cb_get_frame(int) should return a string

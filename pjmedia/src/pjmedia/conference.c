@@ -1385,6 +1385,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+ /*
+ * Get conference bridge mutex.
+ */
+PJ_DEF(pj_mutex_t*) pjmedia_conf_mutex_get( const pjmedia_conf *conf)
+{
+   PJ_ASSERT_RETURN(conf, PJ_EINVAL);
+   return conf->mutex;
+}
+
 
 /*
  * Read from port.

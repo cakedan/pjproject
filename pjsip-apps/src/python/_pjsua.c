@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "_pjsua.h"
+#include "pjsua-lib/pjsua_internal.h"
 
 #define THIS_FILE    "main.c"
 #define POOL_SIZE    512
@@ -2669,34 +2670,38 @@ static PyObject *py_pjsua_recorder_destroy(PyObject *pSelf, PyObject *pArgs)
     return Py_BuildValue("i", status);
 }
 
-/*
+ /*
  * Audio callback get frame.
  * Calls python: string = user_data.cb_get_frame(size_t)
  */
 static pj_status_t py_acb_get_frame(void *user_data, void *buffer, pj_size_t buf_size)
 {
-   PyObject *py_ret, *py_obj;
-   PyGILState_STATE state;
+	PyObject *py_ret, *py_obj;
+	PyGILState_STATE state;
 
-   py_obj = (PyObject*) user_data;
-   /* We are in PJMEDIA thread, so we have to lock the Python interpreter */
-   state = PyGILState_Ensure();
-   py_ret = PyObject_CallMethod(py_obj, "cb_get_frame", "(I)", (unsigned) buf_size);
-   PyGILState_Release(state);
+	py_obj = (PyObject*) user_data;
+	/* Conference bridge mutex is locked here, together with Python can cause deadlock.
+	 * Try to unlock it for a while with fingers crossed. */
+	pj_mutex_unlock(pjmedia_conf_mutex_get(pjsua_var.mconf));
+	/* We are in PJMEDIA thread, so we have to lock the Python interpreter */
+	state = PyGILState_Ensure();
+	py_ret = PyObject_CallMethod(py_obj, "cb_get_frame", "(I)", (unsigned) buf_size);
+	PyGILState_Release(state);
+	pj_mutex_lock(pjmedia_conf_mutex_get(pjsua_var.mconf));
 
-   if (py_ret && PyString_Check(py_ret) && (PyString_Size(py_ret) >= 0)) {
-       pj_size_t returned = PyString_Size(py_ret);
-       /* Truncate returned string if too big */
-       pj_size_t to_copy = returned > buf_size ? buf_size : returned;
-       memcpy(buffer, PyString_AsString(py_ret), to_copy);
-       /* Pad returned string with zeros if too small */
-       if (to_copy < buf_size)
-           pj_bzero((char*) buffer + to_copy, buf_size - to_copy);
-       Py_DECREF(py_ret);
-       return PJ_SUCCESS;
-   }
-   Py_XDECREF(py_ret);
-   return PJ_EINVALIDOP;
+	if (py_ret && PyString_Check(py_ret) && (PyString_Size(py_ret) >= 0)) {
+		pj_size_t returned = PyString_Size(py_ret);
+		/* Truncate returned string if too big */
+		pj_size_t to_copy = returned > buf_size ? buf_size : returned;
+		memcpy(buffer, PyString_AsString(py_ret), to_copy);
+		/* Pad returned string with zeros if too small */
+		if (to_copy < buf_size)
+			pj_bzero((char*) buffer + to_copy, buf_size - to_copy);
+		Py_DECREF(py_ret);
+		return PJ_SUCCESS;
+	}
+	Py_XDECREF(py_ret);
+	return PJ_EINVALIDOP;
 }
 
 /*
@@ -2705,19 +2710,27 @@ static pj_status_t py_acb_get_frame(void *user_data, void *buffer, pj_size_t buf
  */
 static pj_status_t py_acb_put_frame(void *user_data, const void *buffer, pj_size_t buf_size)
 {
-   PyObject *py_ret, *py_obj;
-   pj_status_t ret;
-   PyGILState_STATE state;
+	PyObject *py_ret, *py_obj, *py_name, *py_str;
+	pj_status_t ret;
+	PyGILState_STATE state;
 
-   py_obj = (PyObject*) user_data;
-   /* We are in PJMEDIA thread, so we have to lock the Python interpreter */
-   state = PyGILState_Ensure();
-   py_ret = PyObject_CallMethod(py_obj, "cb_put_frame", "(s#)", buffer, (int) buf_size);
-   PyGILState_Release(state);
+	py_obj = (PyObject*) user_data;
+	py_name = PyString_FromStringAndSize("cb_put_frame", 12);
+	py_str = PyString_FromStringAndSize((const char*) buffer, buf_size);
+	/* Conference bridge mutex is locked here, together with Python can cause deadlock.
+	 * Try to unlock it for a while with fingers crossed. */
+	pj_mutex_unlock(pjmedia_conf_mutex_get(pjsua_var.mconf));
+	/* We are in PJMEDIA thread, so we have to lock the Python interpreter */
+	state = PyGILState_Ensure();
+	py_ret = PyObject_CallMethodObjArgs(py_obj, py_name, py_str, NULL);
+	PyGILState_Release(state);
+	pj_mutex_lock(pjmedia_conf_mutex_get(pjsua_var.mconf));
 
-   ret = py_ret && PyInt_Check(py_ret) ? (pj_status_t) PyInt_AsLong(py_ret) : PJ_EINVALIDOP;
-   Py_XDECREF(py_ret);
-   return ret;
+	ret = py_ret && PyInt_Check(py_ret) ? (pj_status_t) PyInt_AsLong(py_ret) : PJ_EINVALIDOP;
+	Py_XDECREF(py_ret);
+	Py_XDECREF(py_str);
+	Py_XDECREF(py_name);
+	return ret;
 }
 
 /*
@@ -2729,48 +2742,48 @@ static pj_status_t py_acb_put_frame(void *user_data, const void *buffer, pj_size
  */
 static PyObject *py_pjsua_audio_cb_create(PyObject *pSelf, PyObject *pArgs)
 {
-   pj_status_t status;
-   int id = PJSUA_INVALID_ID;
-   PyObject *user_data, *py_get, *py_put;
-   PJ_UNUSED_ARG(pSelf);
+	pj_status_t status;
+	int id = PJSUA_INVALID_ID;
+	PyObject *user_data, *py_get, *py_put;
+	PJ_UNUSED_ARG(pSelf);
 
-   if (!PyArg_ParseTuple(pArgs, "O", &user_data))
-       return NULL;
-   py_get = PyObject_GetAttrString(user_data, "cb_get_frame");
-   if (!py_get || !PyCallable_Check(py_get))
-       py_get = NULL;
-   py_put = PyObject_GetAttrString(user_data, "cb_put_frame");
-   if (!py_put || !PyCallable_Check(py_put))
-       py_put = NULL;
+	if (!PyArg_ParseTuple(pArgs, "O", &user_data))
+		return NULL;
+	py_get = PyObject_GetAttrString(user_data, "cb_get_frame");
+	if (!py_get || !PyCallable_Check(py_get))
+		py_get = NULL;
+	py_put = PyObject_GetAttrString(user_data, "cb_put_frame");
+	if (!py_put || !PyCallable_Check(py_put))
+		py_put = NULL;
 
-   status = pjsua_audio_cb_create(user_data,
-       py_get ? &py_acb_get_frame : NULL,
-       py_put ? &py_acb_put_frame : NULL,
-       &id);
+	status = pjsua_audio_cb_create(user_data,
+		py_get ? &py_acb_get_frame : NULL,
+		py_put ? &py_acb_put_frame : NULL,
+		&id);
 
-   if (status == PJ_SUCCESS)
-       Py_INCREF(user_data);
-   return Py_BuildValue("ii", status, id);
+	if (status == PJ_SUCCESS)
+		Py_INCREF(user_data);
+	return Py_BuildValue("ii", status, id);
 }
 
 /*
  * py_pjsua_audio_cb_get_conf_port
  */
 static PyObject *py_pjsua_audio_cb_get_conf_port(PyObject *pSelf, 
-                        PyObject *pArgs)
+						 PyObject *pArgs)
 {
 
-   int id, port_id;
+	int id, port_id;
 
-   PJ_UNUSED_ARG(pSelf);
+	PJ_UNUSED_ARG(pSelf);
 
-   if (!PyArg_ParseTuple(pArgs, "i", &id)) {
-       return NULL;
-   }
+	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
+		return NULL;
+	}
 
-   port_id = pjsua_audio_cb_get_conf_port(id);
+	port_id = pjsua_audio_cb_get_conf_port(id);
 
-   return Py_BuildValue("i", port_id);
+	return Py_BuildValue("i", port_id);
 }
 
 /*
@@ -2778,23 +2791,23 @@ static PyObject *py_pjsua_audio_cb_get_conf_port(PyObject *pSelf,
  */
 static PyObject *py_pjsua_audio_cb_destroy(PyObject *pSelf, PyObject *pArgs)
 {
-   int id;
-   int status;
-   PyObject *user_data;
+	int id;
+	int status;
+	PyObject *user_data;
 
-   PJ_UNUSED_ARG(pSelf);
+	PJ_UNUSED_ARG(pSelf);
 
-   if (!PyArg_ParseTuple(pArgs, "i", &id)) {
-       return NULL;
-   }
+	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
+		return NULL;
+	}
 
-   status = pjsua_audio_cb_get_user_data(id, (void**) &user_data);
-   if (status != PJ_SUCCESS)
-       return Py_BuildValue("i", status);
-   Py_XDECREF(user_data);
+	status = pjsua_audio_cb_get_user_data(id, (void**) &user_data);
+	if (status != PJ_SUCCESS)
+		return Py_BuildValue("i", status);
+	Py_XDECREF(user_data);
 
-   status = pjsua_audio_cb_destroy(id);
-   return Py_BuildValue("i", status);
+	status = pjsua_audio_cb_destroy(id);
+	return Py_BuildValue("i", status);
 }
 
 /*

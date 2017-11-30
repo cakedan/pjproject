@@ -6846,24 +6846,24 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
  *
  * @param user_data    The user object passed to the callbacks.
  * @param cb_get_frame Callback to be called when audio data needed.
- *                 The buffer should be filled in the callback.
+ *                  The buffer should be filled in the callback.
  * @param cb_put_frame Callback to be called when audio data arrived.
- *                 The callback function should process the buffer.
- * @param p_id        Pointer to receive the audio callback port instance.
+ *                  The callback function should process the buffer.
+ * @param p_id         Pointer to receive the audio callback port instance.
  *                  The id space is shared with recorders.
  *
- * @return     PJ_SUCCESS on success, or the appropriate error code.
+ * @return      PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_audio_cb_create(void *user_data,
-                       pj_status_t (*cb_get_frame)(
-                           void *usr_data,
-                           void *buffer,
-                           pj_size_t buf_size),
-                       pj_status_t (*cb_put_frame)(
-                           void *usr_data,
-                           const void *buffer,
-                           pj_size_t buf_size),
-                       pjsua_recorder_id *p_id);
+                        pj_status_t (*cb_get_frame)(
+                            void *usr_data,
+                            void *buffer,
+                            pj_size_t buf_size),
+                        pj_status_t (*cb_put_frame)(
+                            void *usr_data,
+                            const void *buffer,
+                            pj_size_t buf_size),
+                        pjsua_recorder_id *p_id);
 
 
 /**
@@ -6875,15 +6875,15 @@ PJ_DECL(pj_status_t) pjsua_audio_cb_create(void *user_data,
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsua_audio_cb_get_user_data(pjsua_recorder_id id,
-                       void **user_data);
+                        void **user_data);
 
 
 /**
  * Get conference port associated with audio callback port.
  *
- * @param id       The audio callback (i.e. recorder) ID.
+ * @param id        The audio callback (i.e. recorder) ID.
  *
- * @return     Conference port ID associated with this audio callback.
+ * @return      Conference port ID associated with this audio callback.
  */
 PJ_DECL(pjsua_conf_port_id) pjsua_audio_cb_get_conf_port(pjsua_recorder_id id);
 
@@ -6891,21 +6891,21 @@ PJ_DECL(pjsua_conf_port_id) pjsua_audio_cb_get_conf_port(pjsua_recorder_id id);
 /**
  * Get the media port for the audio callback.
  *
- * @param id       The audio callback ID.
- * @param p_port   The media port associated with the audio callback.
+ * @param id        The audio callback ID.
+ * @param p_port    The media port associated with the audio callback.
  *
- * @return     PJ_SUCCESS on success.
+ * @return      PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsua_audio_cb_get_port(pjsua_recorder_id id,
-                        pjmedia_port **p_port);
+                         pjmedia_port **p_port);
 
 
 /**
  * Destroy audio callback.
  *
- * @param id       The audio callback ID.
+ * @param id        The audio callback ID.
  *
- * @return     PJ_SUCCESS on success, or the appropriate error code.
+ * @return      PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_audio_cb_destroy(pjsua_recorder_id id);
 
