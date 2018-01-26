@@ -66,6 +66,8 @@ enum pjmedia_file_writer_option {PJMEDIA_FILE_WRITE_PCM = 0, PJMEDIA_FILE_WRITE_
 
 enum pjmedia_file_player_option {PJMEDIA_FILE_NO_LOOP = 1};
 
+enum pjmedia_file_descriptor_option {PJMEDIA_FD_BLOCK = 0, PJMEDIA_FD_NONBLOCK = 1, PJMEDIA_FD_HANDLES = 2};
+
 typedef struct pjmedia_tone_digit
 {
   char digit;
@@ -171,7 +173,7 @@ typedef enum pjsua_call_vid_strm_op {PJSUA_CALL_VID_STRM_NO_OP, PJSUA_CALL_VID_S
 
 typedef enum pjsua_vid_req_keyframe_method {PJSUA_VID_REQ_KEYFRAME_SIP_INFO = 1, PJSUA_VID_REQ_KEYFRAME_RTCP_PLI = 2} pjsua_vid_req_keyframe_method;
 
-typedef enum pjsua_call_flag {PJSUA_CALL_UNHOLD = 1, PJSUA_CALL_UPDATE_CONTACT = 2, PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4, PJSUA_CALL_NO_SDP_OFFER = 8, PJSUA_CALL_REINIT_MEDIA = 16, PJSUA_CALL_UPDATE_VIA = 32} pjsua_call_flag;
+typedef enum pjsua_call_flag {PJSUA_CALL_UNHOLD = 1, PJSUA_CALL_UPDATE_CONTACT = 2, PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4, PJSUA_CALL_NO_SDP_OFFER = 8, PJSUA_CALL_REINIT_MEDIA = 16, PJSUA_CALL_UPDATE_VIA = 32, PJSUA_CALL_UPDATE_TARGET = 64} pjsua_call_flag;
 
 typedef enum pjsua_create_media_transport_flag {PJSUA_MED_TP_CLOSE_MEMBER = 1} pjsua_create_media_transport_flag;
 

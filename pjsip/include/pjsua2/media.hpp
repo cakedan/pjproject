@@ -659,6 +659,58 @@ private:
     pjmedia_tone_digit_map digitMap;
 };
 
+/**
+ * Audio File Descriptor I/O.
+ */
+class AudioMediaFD : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaFD();
+
+	/**
+     * Create a file discriptor I/O, and automatically connect this port to
+     * the conference bridge.
+     *
+	 * @param fd_in		Descriptor open for reading (i.e. audio source)
+	 *             		or -1 to disable audio input.
+	 * @param fd_out		Descriptor open for writing (i.e. audio sink)
+	 *             		or -1 to disable audio output.
+     * @param options	 Optional options, which can be used to specify the
+     * 			 file descriptor types and behavidour.
+	 * 			 ORed pjmedia_file_descriptor_option flags:
+	 * 			  - PJMEDIA_FD_NONBLOCK (1) for non-blocking mode (UNIX only;
+	 * 			    O_NONBLOCK is fcntl'ed on the descriptors if specified).
+	 * 			  - PJMEDIA_FD_HANDLES (2): Parameters fd_in and fd_out are Windows
+	 * 			    file handles instead of integer file descriptors (Windows only).
+     */
+    void createFD(int fd_in = -1,
+			int fd_out = -1,
+			unsigned options = 0) throw(Error);
+
+    /**
+     * Typecast from base class AudioMedia. This is useful for application
+     * written in language that does not support downcasting such as Python.
+     *
+     * @param media		The object to be downcasted
+     *
+     * @return			The object as AudioMediaFD instance
+     */
+    static AudioMediaFD* typecastFromAudioMedia(AudioMedia *media);
+
+    /**
+     * Virtual destructor.
+     */
+    virtual ~AudioMediaFD();
+
+private:
+    /**
+     * File Descriptor I/O Id (i.e. shared with Recorder Id).
+     */
+    int	recorderId;
+};
 
 /*************************************************************************
 * Sound device management
@@ -1346,6 +1398,57 @@ private:
     int getActiveDev(bool is_capture) const throw(Error);
 
     friend class Endpoint;
+};
+
+
+/**
+ * Extra audio device. This class allows application to have multiple
+ * sound device instances active concurrently. Application may also use
+ * this class to improve media clock. Normally media clock is driven by
+ * sound device in master port, but unfortunately some sound devices may
+ * produce jittery clock. To improve media clock, application can install
+ * Null Sound Device (i.e: using AudDevManager::setNullDev()), which will
+ * act as a master port, and install the sound device as extra sound device.
+ * Note that extra sound device will not have auto-close upon idle feature.
+ */
+class ExtraAudioDevice : public AudioMedia
+{
+public:
+    /**
+     * Constructor
+     *
+     * @param playdev		Playback device ID.
+     * @param recdev		Record device ID.
+     */
+    ExtraAudioDevice(int playdev, int recdev);
+
+    /**
+     * Destructor
+     */
+    virtual ~ExtraAudioDevice();
+
+    /**
+     * Open the audio device using format (e.g.: clock rate, channel count,
+     * samples per frame) matched to the conference bridge's format.
+     */
+    void open();
+
+    /**
+     * Close the audio device.
+     */
+    void close();
+
+    /**
+     * Is the extra audio device opened?
+     *
+     * @return	    		'true' if it is opened.
+     */
+    bool isOpened();
+
+protected:
+    int playDev;
+    int recDev;
+    void *ext_snd_dev;
 };
 
 

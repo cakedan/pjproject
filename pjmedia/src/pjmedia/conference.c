@@ -75,16 +75,20 @@ static FILE *fhnd_rec;
  * signal level of the ports, so that sudden change in signal level
  * in the port does not cause misaligned signal (which causes noise).
  */
-#define ATTACK_A    (conf->clock_rate / conf->samples_per_frame)
-#define ATTACK_B    1
-#define DECAY_A	    0
-#define DECAY_B	    1
+#if defined(PJMEDIA_CONF_USE_AGC) && PJMEDIA_CONF_USE_AGC != 0
+#   define ATTACK_A     ((conf->clock_rate / conf->samples_per_frame) >> 4)
+#   define ATTACK_B	1
+#   define DECAY_A	0
+#   define DECAY_B	1
 
-#define SIMPLE_AGC(last, target) \
+#   define SIMPLE_AGC(last, target) \
     if (target >= last) \
 	target = (ATTACK_A*(last+1)+ATTACK_B*target)/(ATTACK_A+ATTACK_B); \
     else \
 	target = (DECAY_A*last+DECAY_B*target)/(DECAY_A+DECAY_B)
+#else
+#   define SIMPLE_AGC(last, target)
+#endif
 
 #define MAX_LEVEL   (32767)
 #define MIN_LEVEL   (-32768)
@@ -1385,15 +1389,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
- /*
- * Get conference bridge mutex.
- */
-PJ_DEF(pj_mutex_t*) pjmedia_conf_mutex_get( const pjmedia_conf *conf)
-{
-   PJ_ASSERT_RETURN(conf, PJ_EINVAL);
-   return conf->mutex;
-}
-
 
 /*
  * Read from port.
@@ -1986,11 +1981,13 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 		/* Check if normalization adjustment needed. */
 		if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+		    int tmp_adj;
+
 		    if (-mix_buf_min > mix_buf_max)
 			mix_buf_max = -mix_buf_min;
 
 		    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
-		    int tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
+		    tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
 		    if (tmp_adj < listener->mix_adj)
 			listener->mix_adj = tmp_adj;
 		}

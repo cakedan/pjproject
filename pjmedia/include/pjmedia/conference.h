@@ -495,13 +495,6 @@ PJ_DECL(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
 						   unsigned slot,
 						   int adj_level );
 
-/**
- * Get conference bridge internal mutex.
- * @param conf The conference bridge.
- * @return The mutex.
- */
-PJ_DECL(pj_mutex_t*) pjmedia_conf_mutex_get( const pjmedia_conf *conf);
-
 
 
 PJ_END_DECL
