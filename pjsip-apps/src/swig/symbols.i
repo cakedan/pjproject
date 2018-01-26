@@ -66,6 +66,8 @@ enum pjmedia_file_writer_option {PJMEDIA_FILE_WRITE_PCM = 0, PJMEDIA_FILE_WRITE_
 
 enum pjmedia_file_player_option {PJMEDIA_FILE_NO_LOOP = 1};
 
+enum pjmedia_file_descriptor_option {PJMEDIA_FD_BLOCK = 0, PJMEDIA_FD_NONBLOCK = 1, PJMEDIA_FD_HANDLES = 2};
+
 typedef struct pjmedia_tone_digit
 {
   char digit;

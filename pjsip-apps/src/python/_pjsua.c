@@ -2669,6 +2669,62 @@ static PyObject *py_pjsua_recorder_destroy(PyObject *pSelf, PyObject *pArgs)
     return Py_BuildValue("i", status);
 }
 
+ /*
+ * py_pjsua_audio_fd_create
+ */
+static PyObject *py_pjsua_audio_fd_create(PyObject *pSelf, PyObject *pArgs)
+{
+	pj_status_t status;
+	int id = PJSUA_INVALID_ID;
+	int fd_in, fd_out;
+	unsigned options;
+	PJ_UNUSED_ARG(pSelf);
+
+	if (!PyArg_ParseTuple(pArgs, "iiI", &fd_in, &fd_out, &options))
+		return NULL;
+
+	status = pjsua_audio_fd_create(fd_in, fd_out, options, &id);
+	return Py_BuildValue("ii", status, id);
+}
+
+/*
+ * py_pjsua_audio_fd_get_conf_port
+ */
+static PyObject *py_pjsua_audio_fd_get_conf_port(PyObject *pSelf, 
+						 PyObject *pArgs)
+{
+
+	int id, port_id;
+
+	PJ_UNUSED_ARG(pSelf);
+
+	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
+		return NULL;
+	}
+
+	port_id = pjsua_audio_fd_get_conf_port(id);
+
+	return Py_BuildValue("i", port_id);
+}
+
+/*
+ * py_pjsua_audio_fd_destroy
+ */
+static PyObject *py_pjsua_audio_fd_destroy(PyObject *pSelf, PyObject *pArgs)
+{
+	int id;
+	int status;
+
+	PJ_UNUSED_ARG(pSelf);
+
+	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
+		return NULL;
+	}
+
+	status = pjsua_audio_fd_destroy(id);
+	return Py_BuildValue("i", status);
+}
+
 /*
  * py_pjsua_enum_snd_devs
  */
@@ -4279,6 +4335,18 @@ static PyMethodDef py_pjsua_methods[] =
     {
         "recorder_destroy", py_pjsua_recorder_destroy, METH_VARARGS,
         pjsua_recorder_destroy_doc
+    },
+    {
+        "audio_fd_create", py_pjsua_audio_fd_create, METH_VARARGS,
+        pjsua_audio_fd_create_doc
+    },
+    {
+        "audio_fd_get_conf_port", py_pjsua_audio_fd_get_conf_port, METH_VARARGS,
+        pjsua_audio_fd_get_conf_port_doc
+    },
+    {
+        "audio_fd_destroy", py_pjsua_audio_fd_destroy, METH_VARARGS,
+        pjsua_audio_fd_destroy_doc
     },
     {
         "enum_snd_devs", py_pjsua_enum_snd_devs, METH_VARARGS,
